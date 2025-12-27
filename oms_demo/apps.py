@@ -10,12 +10,11 @@ class OmsDemoConfig(AppConfig):
         from oms_demo.strategies import MailerooEmailStrategy
 
         registry = StrategyRegistry()
-        registry.register_strategy(
+        registry.register(
             "maileroo_email",
             MailerooEmailStrategy(
-                smtp_server=config("MAILEROO_SMTP_SERVER", default="smtp.maileroo.com"),
-                smtp_port=config("MAILEROO_SMTP_PORT", default=587, cast=int),
-                username=config("MAILEROO_USERNAME", default=""),
-                password=config("MAILEROO_PASSWORD", default=""),
+                api_key=config(
+                    "MAILEROO_API_KEY",
+                ),
             ),
         )

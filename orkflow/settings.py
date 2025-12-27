@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_json_widget",
+    "rest_framework",
     "oms_demo.apps.OmsDemoConfig",
     "core.apps.CoreConfig",
 ]

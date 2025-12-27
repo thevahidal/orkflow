@@ -1,0 +1,20 @@
+meta {
+  name: list-order-states
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/v1/orders/:order_id/states/
+  body: none
+  auth: inherit
+}
+
+params:path {
+  order_id: 1
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

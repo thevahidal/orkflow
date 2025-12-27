@@ -1,0 +1,22 @@
+meta {
+  name: execute-order-state-actions
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/api/v1/orders/:order_id/states/:state_id/actions/:action_id/execute/
+  body: none
+  auth: inherit
+}
+
+params:path {
+  action_id: 1
+  state_id: 1
+  order_id: 1
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

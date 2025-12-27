@@ -1,3 +1,6 @@
-from django.shortcuts import render
+from core.views import WorkflowableStatesViewSet
+from oms_demo.models import Order
 
-# Create your views here.
+
+class OrderStatesView(WorkflowableStatesViewSet):
+    workflowable_model = Order

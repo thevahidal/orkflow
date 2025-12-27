@@ -1,17 +1,28 @@
+from typing import Dict, Any
 from django.db import models
 from django.core.exceptions import ValidationError
 
+from core.guards.registry import GuardRegistry
 from core.strategies import StrategyRegistry
 
 
 class State(models.Model):
     name = models.CharField(max_length=100)
     actions = models.ManyToManyField("Action", blank=True)
-    # on_enter
-    # on_exit
+
+    enter_guard = models.CharField(max_length=100, blank=True)
+    exit_guard = models.CharField(max_length=100, blank=True)
 
     def __str__(self):
         return self.name
+
+    def clean(self) -> None:
+        enter_guard = GuardRegistry.get(self.enter_guard)
+        exit_guard = GuardRegistry.get(self.exit_guard)
+
+        for guard in (enter_guard, exit_guard):
+            if not guard:
+                raise ValidationError({"guard": f"Guard '{guard}' is not registered."})
 
 
 class Action(models.Model):
@@ -19,31 +30,43 @@ class Action(models.Model):
     strategy = models.CharField(max_length=100)
     metadata = models.JSONField(blank=True, null=True)
 
-    def __str__(self):
-        return f"{self.name}"
+    def __str__(self) -> str:
+        return self.name
 
-    def clean(self):
-        strategy = StrategyRegistry().get_strategy(self.strategy)
+    def _get_strategy(self):
+        strategy = StrategyRegistry.get(self.strategy)
         if not strategy:
             raise ValidationError(
                 {"strategy": f"Strategy '{self.strategy}' is not registered."}
             )
+        return strategy
+
+    def clean(self) -> None:
+        strategy = self._get_strategy()
 
         try:
-            strategy.validate_metadata(self.metadata)
-        except Exception as error:
-            raise ValidationError(error)
+            self.metadata = strategy.validate_metadata(self).model_dump()
+        except ValidationError:
+            raise
+        except Exception as exc:
+            raise ValidationError({"metadata": str(exc)})
 
-    def execute(self, *args, **kwargs):
-        strategy = StrategyRegistry().get_strategy(self.strategy)
-        strategy.execute(self, *args, **kwargs)
+    def execute(self, instance, inputs: Dict[str, Any], *args, **kwargs):
+        strategy = self._get_strategy()
+        return strategy.execute(
+            instance=instance,
+            action=self,
+            inputs=inputs,
+            *args,
+            **kwargs,
+        )
 
 
-class Movement(models.Model):
+class Transition(models.Model):
     slug = models.SlugField(unique=True)
-    from_states = models.ManyToManyField(State, related_name="movements_from")
+    from_states = models.ManyToManyField(State, related_name="transitions_from")
     to_state = models.ForeignKey(
-        State, related_name="movements_to", on_delete=models.CASCADE
+        State, related_name="transition_to", on_delete=models.CASCADE
     )
 
     def __str__(self):
@@ -83,3 +106,18 @@ class Workflowable(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
+    def _run_exit_guard(self):
+        state: State = self._current_state
+        if state.exit_guard:
+            guard = GuardRegistry.get(state.exit_guard)
+            if not guard:
+                raise ValidationError("Exit guard not found")
+            guard.can_exit(self)
+
+    def _run_enter_guard(self, next_state: State):
+        if next_state.enter_guard:
+            guard = GuardRegistry.get(next_state.enter_guard)
+            if not guard:
+                raise ValidationError("Enter guard not found")
+            guard.can_enter(self)

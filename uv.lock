@@ -278,6 +278,7 @@ dependencies = [
     { name = "ipython" },
     { name = "pydantic" },
     { name = "python-decouple" },
+    { name = "requests" },
 ]
 
 [package.dev-dependencies]
@@ -295,6 +296,7 @@ requires-dist = [
     { name = "ipython", specifier = ">=9.8.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "python-decouple", specifier = ">=3.8" },
+    { name = "requests", specifier = ">=2.32.5" },
 ]
 
 [package.metadata.requires-dev]

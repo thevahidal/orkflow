@@ -1,17 +1,19 @@
+from typing import Type, Dict
+
+from .base import BaseStrategy
+
+
 class StrategyRegistry:
-    _instance = None
-    _strategies = {}
+    _strategies: Dict[str, Type[BaseStrategy]] = {}
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(StrategyRegistry, cls).__new__(cls)
-        return cls._instance
+    @classmethod
+    def register(cls, name: str, strategy: Type[BaseStrategy]) -> None:
+        cls._strategies[name] = strategy
 
-    def register_strategy(self, name, strategy):
-        self._strategies[name] = strategy
+    @classmethod
+    def get(cls, name: str) -> Type[BaseStrategy] | None:
+        return cls._strategies.get(name)
 
-    def get_strategy(self, name):
-        return self._strategies.get(name)
-
-    def list_strategies(self):
-        return list(self._strategies.keys())
+    @classmethod
+    def list(cls) -> list[str]:
+        return list(cls._strategies)

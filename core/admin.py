@@ -3,7 +3,7 @@ from django.db import models
 
 from django_json_widget.widgets import JSONEditorWidget
 
-from core.models import State, Action, Movement, Workflow
+from core.models import State, Action, Transition, Workflow
 
 
 @admin.register(State)
@@ -23,7 +23,7 @@ class ActionAdmin(admin.ModelAdmin):
     }
 
 
-@admin.register(Movement)
+@admin.register(Transition)
 class MovementAdmin(admin.ModelAdmin):
     pass
 

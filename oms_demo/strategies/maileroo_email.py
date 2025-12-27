@@ -1,38 +1,60 @@
-from typing import override
+import logging
+from smtplib import SMTP
+from typing import TYPE_CHECKING, Dict, Any
+
+from django.core.exceptions import ValidationError
+import requests
+
 from core.models import Action
-from core.strategies.base import BaseMetadataSchmea, BaseStrategy
+from core.strategies.base import BaseMetadataSchema, BaseStrategy
+
+if TYPE_CHECKING:
+    from django.db.models import Model
+
+
+logger = logging.getLogger(__name__)
 
 
 class MailerooEmailStrategy(BaseStrategy):
-    def __init__(self, smtp_server, smtp_port, username, password):
-        self.smtp_server = smtp_server
-        self.smtp_port = smtp_port
-        self.username = username
-        self.password = password
-
-    class MetadataSchema(BaseMetadataSchmea):
+    class MetadataSchema(BaseMetadataSchema):
         to: str
         subject: str
         body: str
 
-    def smtp_connect(self):
-        from smtplib import SMTP
+    def __init__(self, *, api_key: str):
+        self.sender = "info@orkflow.com"
+        self.api_key = api_key
 
-        server = SMTP(self.smtp_server, self.smtp_port)
-        server.starttls()
-        server.login(self.username, self.password)
-        return server
+    def _send_email(self, *, to: str, subject: str, body: str):
+        try:
+            return requests.post(
+                "https://smtp.maileroo.com/api/v2/emails",
+                headers={"X-Api-Key": self.api_key},
+                json={
+                    "from": {
+                        "address": self.sender,
+                    },
+                    "to": [
+                        {
+                            "address": to,
+                        }
+                    ],
+                    "subject": subject,
+                    "plain": body,
+                },
+            )
+        except Exception as error:
+            logger.exception(error)
+            raise ValidationError(error)
 
-    def send_email(self, recipient, subject, body):
-        server = self.smtp_connect()
-        message = f"Subject: {subject}\n\n{body}"
-        server.sendmail(self.username, recipient, message)
-        server.quit()
+    def execute(
+        self, instance: "Model", action: Action, inputs: Dict[str, Any], *args, **kwargs
+    ) -> None:
+        metadata = super().execute(instance, action, inputs)
 
-    def execute(self, action: Action, *args, **kwargs):
-        recipient = action.metadata.get("to")
-        subject = action.metadata.get("subject", "No Subject")
-        body = action.metadata.get("body", "No Content")
-        if not recipient:
-            raise ValueError("Recipient email address is required in action metadata.")
-        self.send_email(recipient, subject, body)
+        response = self._send_email(
+            to=metadata.to,
+            subject=metadata.subject,
+            body=metadata.body,
+        )
+        return response
