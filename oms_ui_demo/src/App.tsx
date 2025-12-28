@@ -1,0 +1,59 @@
+import { useState, useCallback } from 'react';
+import { ReactFlow, applyNodeChanges, applyEdgeChanges, addEdge, Handle, Position } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+
+const initialNodes = [
+  { id: 'n1', position: { x: 0, y: 0 }, data: { label: 'Node 1' }, type: "normal" },
+  { id: 'n2', position: { x: 0, y: 100 }, data: { label: 'Node 2' }, type: "normal" },
+];
+const initialEdges = [{ id: 'n1-n2', source: 'n1', target: 'n2' }];
+export function NormalNode(props) {
+  const onChange = useCallback((evt) => {
+    console.log(evt.target.value);
+  }, []);
+
+  return (
+    <div className="text-updater-node">
+      <div>
+        <label htmlFor="text">Text:</label>
+        <input id="text" name="text" onChange={onChange} className="nodrag" />
+      </div>
+      <Handle type="source" position={Position.Left} />
+      <Handle type="target" position={Position.Right} />
+    </div>
+  );
+}
+const nodeTypes = {
+  normal: NormalNode
+}
+export default function App() {
+  const [nodes, setNodes] = useState(initialNodes);
+  const [edges, setEdges] = useState(initialEdges);
+
+  const onNodesChange = useCallback(
+    (changes) => setNodes((nodesSnapshot) => applyNodeChanges(changes, nodesSnapshot)),
+    [],
+  );
+  const onEdgesChange = useCallback(
+    (changes) => setEdges((edgesSnapshot) => applyEdgeChanges(changes, edgesSnapshot)),
+    [],
+  );
+  const onConnect = useCallback(
+    (params) => setEdges((edgesSnapshot) => addEdge(params, edgesSnapshot)),
+    [],
+  );
+
+  return (
+    <div style={{ width: '100vw', height: '100vh' }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        fitView
+      />
+    </div>
+  );
+}

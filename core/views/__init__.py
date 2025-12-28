@@ -4,7 +4,13 @@ from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from core.serializers import StateSerializer, ActionSerializer
+from core.models import Transition, Workflow
+from core.serializers import (
+    StateSerializer,
+    ActionSerializer,
+    TransitionSerializer,
+    WorkflowSerializer,
+)
 from django.shortcuts import get_object_or_404
 
 
@@ -32,7 +38,10 @@ class WorkflowableStatesViewSet(WorkflowableMixin, viewsets.ViewSet):
 
     def list(self, request, workflowable_id=None):
         workflowable = self.get_workflowable()
-        states = workflowable._workflow.states.all()
+        states = workflowable._workflow.states.prefetch_related(
+            "transition_from", "transition_to"
+        ).all()
+
         return Response(
             StateSerializer(
                 states, many=True, context=self.get_serializer_context()
@@ -86,3 +95,15 @@ class WorkflowableStatesViewSet(WorkflowableMixin, viewsets.ViewSet):
             return Response({"status": "executed"}, status=status.HTTP_200_OK)
         except ValidationError as e:
             raise serializers.ValidationError(e)
+
+
+class WorkflowViewSet(viewsets.ModelViewSet):
+    queryset = Workflow.objects.prefetch_related("states")
+    serializer_class = WorkflowSerializer
+
+
+class MovementViewSet(viewsets.ModelViewSet):
+    queryset = Transition.objects.select_related(
+        "from_state", "to_state"
+    ).prefetch_related("actions")
+    serializer_class = TransitionSerializer
